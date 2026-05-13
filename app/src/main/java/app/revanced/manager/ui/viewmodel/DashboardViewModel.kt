@@ -3,19 +3,23 @@ package app.revanced.manager.ui.viewmodel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.ContentResolver
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Process
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import app.revanced.manager.R
 import app.revanced.manager.domain.manager.PreferencesManager
 import app.revanced.manager.domain.repository.AnnouncementRepository
 import app.revanced.manager.domain.repository.DownloaderRepository
 import app.revanced.manager.domain.repository.ManagerUpdateRepository
 import app.revanced.manager.domain.repository.PatchBundleRepository
+import app.revanced.manager.network.api.EndpointState
 import app.revanced.manager.network.dto.ReVancedAnnouncement
 import app.revanced.manager.util.PM
 import app.revanced.manager.util.uiSafe
@@ -32,6 +36,7 @@ class DashboardViewModel(
     private val downloaderRepository: DownloaderRepository,
     private val announcementRepository: AnnouncementRepository,
     private val managerUpdateRepository: ManagerUpdateRepository,
+    private val endpointState: EndpointState,
     val prefs: PreferencesManager,
     private val pm: PM,
 ) : ViewModel() {
@@ -42,6 +47,16 @@ class DashboardViewModel(
 
     val hasUpdate = managerUpdateRepository.hasUpdate
     val updateVersion = managerUpdateRepository.version
+
+    private val patchingWorkActive =
+        WorkManager.getInstance(app)
+            .getWorkInfosForUniqueWorkFlow(PATCHING_WORK_NAME)
+            .map { infos -> infos.any { !it.state.isFinished } }
+
+    val primaryRecoveryAvailable = combine(
+        endpointState.primaryRecoveryAvailable,
+        patchingWorkActive,
+    ) { available, busy -> available && !busy }
 
     val sourcesNotDownloaded = patchBundleRepository.bundleInfoFlow.map { it.isEmpty() }
     val sourceUpdatesAvailable = combine(
@@ -131,5 +146,18 @@ class DashboardViewModel(
 
     fun createRemoteSource(apiUrl: String, autoUpdate: Boolean) = viewModelScope.launch {
         patchBundleRepository.createRemote(apiUrl, autoUpdate)
+    }
+
+    fun dismissPrimaryRecoveryPrompt() = endpointState.dismissPrimaryRecoveryPrompt()
+    fun restartApp() {
+        val intent = app.packageManager.getLaunchIntentForPackage(app.packageName)
+            ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            ?: return
+        app.startActivity(intent)
+        Process.killProcess(Process.myPid())
+    }
+
+    private companion object {
+        const val PATCHING_WORK_NAME = "patching"
     }
 }

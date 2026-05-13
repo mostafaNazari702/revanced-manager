@@ -10,7 +10,9 @@ import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.prepareGet
 import io.ktor.client.request.request
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.ByteReadChannel
@@ -64,6 +66,33 @@ class HttpService(
         return response
     }
 
+    suspend fun requestRaw(builder: HttpRequestBuilder.() -> Unit): APIResponse<RawResponse> {
+        var body: String? = null
+        return try {
+            val response: HttpResponse = http.request(builder)
+            if (response.status.isSuccess()) {
+                body = response.bodyAsText()
+                APIResponse.Success(
+                    RawResponse(
+                        body = body,
+                        cacheControlMaxAgeMillis = parseMaxAgeMillis(response.headers[HttpHeaders.CacheControl]),
+                    )
+                )
+            } else {
+                body = try {
+                    response.bodyAsText()
+                } catch (t: Throwable) {
+                    null
+                }
+                Log.e(tag, "Failed to fetch: API error, http status: ${response.status}, body: $body")
+                APIResponse.Error(APIError(response.status, body))
+            }
+        } catch (t: Throwable) {
+            Log.e(tag, "Failed to fetch: error: $t, body: $body")
+            APIResponse.Failure(APIFailure(t, body))
+        }
+    }
+
     suspend fun streamTo(
         outputStream: OutputStream,
         builder: HttpRequestBuilder.() -> Unit
@@ -91,4 +120,15 @@ class HttpService(
     ) = saveLocation.outputStream().use { streamTo(it, builder) }
 
     class HttpException(status: HttpStatusCode) : Exception("Failed to fetch: http status: $status")
+}
+
+data class RawResponse(val body: String, val cacheControlMaxAgeMillis: Long?)
+
+internal fun parseMaxAgeMillis(headerValue: String?): Long? {
+    if (headerValue.isNullOrBlank()) return null
+    val tokens = headerValue.split(',').map { it.trim() }
+    val maxAge = tokens.firstOrNull { it.startsWith("max-age=", ignoreCase = true) } ?: return null
+    val seconds = maxAge.substring("max-age=".length).trim().toLongOrNull() ?: return null
+    if (seconds < 0L) return null
+    return seconds * 1000L
 }

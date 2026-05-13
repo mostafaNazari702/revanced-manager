@@ -1,7 +1,6 @@
 package app.revanced.manager.domain.repository
 
 import app.revanced.manager.BuildConfig
-import app.revanced.manager.network.api.ReVancedAPI
 import app.revanced.manager.network.dto.ReVancedAsset
 import app.revanced.manager.network.utils.getOrThrow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.datetime.LocalDateTime
 
 class ManagerUpdateRepository(
-    private val reVancedAPI: ReVancedAPI
+    private val reVancedAPI: ReVancedRepository
 ) {
     private val asset: ReVancedAsset? = null
     private val _releasedAt = MutableStateFlow<LocalDateTime?>(null)

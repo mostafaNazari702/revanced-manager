@@ -119,6 +119,10 @@ dependencies {
     // Ackpine
     implementation(libs.ackpine.core)
     implementation(libs.ackpine.ktx)
+
+    // Unit test
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 buildscript {
@@ -225,6 +229,10 @@ android {
         compose = true
         aidl = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     androidResources {

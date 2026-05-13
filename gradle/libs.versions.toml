@@ -41,6 +41,8 @@ semver-parser = "3.0.0"
 ackpine = "0.22.7"
 foundation-layout = "1.11.0"
 paging3 = "3.4.2"
+junit = "4.13.2"
+kotlinx-coroutines-test = "1.8.1"
 
 [libraries]
 # AndroidX Core
@@ -144,6 +146,10 @@ semver-parser = { module = "io.github.z4kn4fein:semver", version.ref = "semver-p
 ackpine-core = { module = "ru.solrudev.ackpine:ackpine-core", version.ref = "ackpine" }
 ackpine-ktx = { module = "ru.solrudev.ackpine:ackpine-ktx", version.ref = "ackpine" }
 androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundation-layout" }
+
+# Test
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }

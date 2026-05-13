@@ -1,7 +1,7 @@
 package app.revanced.manager.domain.sources
 
 import app.revanced.manager.data.redux.ActionContext
-import app.revanced.manager.network.api.ReVancedAPI
+import app.revanced.manager.domain.repository.ReVancedRepository
 import app.revanced.manager.network.dto.ReVancedAsset
 import app.revanced.manager.network.service.HttpService
 import app.revanced.manager.network.utils.APIResponse
@@ -118,9 +118,9 @@ class APISource<T>(
     endpoint: String,
     autoUpdate: Boolean,
     loader: Loader<T>,
-    private val getUpdate: suspend ReVancedAPI.() -> APIResponse<ReVancedAsset>
+    private val getUpdate: suspend ReVancedRepository.() -> APIResponse<ReVancedAsset>
 ) : RemoteSource<T>(name, uid, versionHash, releasedAt, error, file, endpoint, autoUpdate, loader) {
-    private val api: ReVancedAPI by inject()
+    private val api: ReVancedRepository by inject()
 
     override suspend fun getLatestInfo() = api.getUpdate().getOrThrow()
     override fun copy(
