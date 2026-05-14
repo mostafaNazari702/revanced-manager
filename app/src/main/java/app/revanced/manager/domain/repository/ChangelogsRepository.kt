@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.core.net.toUri
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import app.revanced.manager.network.api.ReVancedAPI
 import app.revanced.manager.network.dto.ReVancedAssetHistory
 import app.revanced.manager.network.utils.getOrThrow
 import kotlinx.parcelize.Parcelize
@@ -19,7 +20,7 @@ sealed interface ChangelogSource : Parcelable {
 }
 
 class ChangelogsRepository(
-    private val api: ReVancedRepository,
+    private val api: ReVancedAPI,
     private val source: ChangelogSource,
 ) : PagingSource<Int, ReVancedAssetHistory>() {
 

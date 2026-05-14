@@ -4,17 +4,15 @@ import app.revanced.manager.data.platform.Filesystem
 import app.revanced.manager.data.platform.NetworkInfo
 import app.revanced.manager.domain.repository.*
 import app.revanced.manager.domain.worker.WorkerRepository
-import app.revanced.manager.network.api.ApiResponseCache
 import app.revanced.manager.network.api.EndpointState
+import app.revanced.manager.network.api.ReVancedAPI
 import org.koin.core.module.dsl.createdAtStart
 import org.koin.core.module.dsl.singleOf
-import org.koin.android.ext.koin.androidApplication
 import org.koin.dsl.module
 
 val repositoryModule = module {
-    single { ApiResponseCache(androidApplication()) }
     singleOf(::EndpointState)
-    singleOf(::ReVancedRepository)
+    singleOf(::ReVancedAPI)
     singleOf(::ManagerUpdateRepository)
     singleOf(::AnnouncementRepository)
     singleOf(::Filesystem) {

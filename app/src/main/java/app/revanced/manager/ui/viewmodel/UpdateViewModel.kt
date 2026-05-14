@@ -22,7 +22,7 @@ import app.revanced.manager.data.platform.NetworkInfo
 import app.revanced.manager.domain.repository.ChangelogSource
 import app.revanced.manager.domain.repository.ChangelogsRepository
 import app.revanced.manager.domain.repository.ManagerUpdateRepository
-import app.revanced.manager.domain.repository.ReVancedRepository
+import app.revanced.manager.network.api.ReVancedAPI
 import app.revanced.manager.network.dto.ReVancedAsset
 import app.revanced.manager.network.dto.ReVancedAssetHistory
 import app.revanced.manager.network.service.HttpService
@@ -44,7 +44,7 @@ import ru.solrudev.ackpine.session.await
 import ru.solrudev.ackpine.session.parameters.Confirmation
 
 class UpdateViewModel(
-    private val api: ReVancedRepository,
+    private val api: ReVancedAPI,
     private val source: ChangelogSource,
     private val downloadOnScreenEntry: Boolean,
     private val app: Application,

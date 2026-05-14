@@ -119,10 +119,6 @@ dependencies {
     // Ackpine
     implementation(libs.ackpine.core)
     implementation(libs.ackpine.ktx)
-
-    // Unit test
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 buildscript {

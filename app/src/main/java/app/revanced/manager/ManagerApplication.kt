@@ -11,7 +11,7 @@ import app.revanced.manager.domain.repository.DownloadedAppRepository
 import app.revanced.manager.domain.repository.DownloaderRepository
 import app.revanced.manager.domain.repository.PatchBundleRepository
 import app.revanced.manager.network.api.EndpointState
-import app.revanced.manager.domain.repository.ReVancedRepository
+import app.revanced.manager.network.api.ReVancedAPI
 import app.revanced.manager.util.tag
 import kotlinx.coroutines.Dispatchers
 import coil.Coil
@@ -37,7 +37,7 @@ class ManagerApplication : Application() {
     private val downloadedAppsRepository: DownloadedAppRepository by inject()
     private val fs: Filesystem by inject()
     private val endpointState: EndpointState by inject()
-    private val reVancedRepository: ReVancedRepository by inject()
+    private val reVancedAPI: ReVancedAPI by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -123,7 +123,7 @@ class ManagerApplication : Application() {
         }
         
         scope.launch(Dispatchers.IO) {
-            if (endpointState.previousSessionUsedFallback() && reVancedRepository.probePrimary()) {
+            if (endpointState.previousSessionUsedFallback() && reVancedAPI.probePrimary()) {
                 Log.i(tag, "Primary API endpoint recovered since last session")
                 endpointState.signalPrimaryRecoveryDetected()
             }

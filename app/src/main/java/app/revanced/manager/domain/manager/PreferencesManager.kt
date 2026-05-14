@@ -15,7 +15,7 @@ class PreferencesManager(
     val theme = enumPreference("theme", Theme.SYSTEM)
 
     val api = stringPreference("api_url", EndpointState.DEFAULT_PRIMARY_API_URL)
-    val apiBackup = stringPreference("api_backup_url", EndpointState.DEFAULT_BACKUP_API_URL)
+    val apiFallback = stringPreference("api_fallback_url", EndpointState.DEFAULT_FALLBACK_API_URL)
     val lastSessionUsedFallback = booleanPreference("last_session_used_fallback", false)
 
     val useProcessRuntime = booleanPreference("use_process_runtime", false)

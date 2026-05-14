@@ -4,8 +4,11 @@ import android.content.Context
 import app.revanced.manager.BuildConfig
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
+import io.ktor.client.plugins.cache.HttpCache
+import io.ktor.client.plugins.cache.storage.FileStorage
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
@@ -38,6 +41,13 @@ val httpModule = module {
         }
         install(ContentNegotiation) {
             json(json)
+        }
+        install(HttpCache) {
+            publicStorage(
+                FileStorage(context.cacheDir.resolve("api_cache").also { it.mkdirs() })
+            )
+        }
+        install(HttpRequestRetry) {
         }
         install(HttpTimeout) {
             socketTimeoutMillis = 10000

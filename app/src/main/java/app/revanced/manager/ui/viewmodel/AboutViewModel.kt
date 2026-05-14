@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.revanced.manager.domain.manager.PreferencesManager
-import app.revanced.manager.domain.repository.ReVancedRepository
+import app.revanced.manager.network.api.ReVancedAPI
 import app.revanced.manager.network.dto.ReVancedDonationLink
 import app.revanced.manager.network.dto.ReVancedSocial
 import app.revanced.manager.network.utils.getOrNull
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AboutViewModel(
-    private val reVancedAPI: ReVancedRepository,
+    private val reVancedAPI: ReVancedAPI,
     prefs: PreferencesManager,
 ) : ViewModel() {
     var socials by mutableStateOf(emptyList<ReVancedSocial>())

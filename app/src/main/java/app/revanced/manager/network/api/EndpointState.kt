@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class EndpointState(
     private val prefs: PreferencesManager,
 ) {
-    enum class ActiveEndpoint { PRIMARY, BACKUP }
+    enum class ActiveEndpoint { PRIMARY, FALLBACK }
 
     private val _active = MutableStateFlow(ActiveEndpoint.PRIMARY)
     val active: StateFlow<ActiveEndpoint> = _active.asStateFlow()
@@ -19,31 +19,38 @@ class EndpointState(
     val primaryRecoveryAvailable: StateFlow<Boolean> = _primaryRecoveryAvailable.asStateFlow()
 
     suspend fun primaryUrl(): String = prefs.api.get().trimEnd('/')
-    suspend fun backupUrl(): String = prefs.apiBackup.get().trimEnd('/')
-    fun switchToBackup(): Boolean = _active.compareAndSet(ActiveEndpoint.PRIMARY, ActiveEndpoint.BACKUP)
+    suspend fun fallbackUrl(): String = prefs.apiFallback.get().trimEnd('/')
 
-    suspend fun markBackupResponseSucceeded() {
-        if (prefs.lastSessionUsedFallback.get()) return
-        prefs.lastSessionUsedFallback.update(true)
+    suspend fun endpoints(): List<Pair<ActiveEndpoint, String>> {
+        val primary = ActiveEndpoint.PRIMARY to primaryUrl()
+        val fallback = ActiveEndpoint.FALLBACK to fallbackUrl()
+        return when (_active.value) {
+            ActiveEndpoint.PRIMARY -> listOf(primary, fallback)
+            ActiveEndpoint.FALLBACK -> listOf(fallback)
+        }
     }
 
-    suspend fun markPrimaryResponseSucceeded() {
-        if (!prefs.lastSessionUsedFallback.get()) return
-        prefs.lastSessionUsedFallback.update(false)
+    fun switchToFallback(): Boolean =
+        _active.compareAndSet(ActiveEndpoint.PRIMARY, ActiveEndpoint.FALLBACK)
+
+    suspend fun markEndpointResponseSucceeded(endpoint: ActiveEndpoint) {
+        val usedFallback = endpoint == ActiveEndpoint.FALLBACK
+        if (prefs.lastSessionUsedFallback.get() != usedFallback) {
+            prefs.lastSessionUsedFallback.update(usedFallback)
+        }
     }
 
-    suspend fun updateBackupFromAbout(advertised: String?) {
+    suspend fun updateFallbackFromAbout(advertised: String?) {
         val normalized = advertised?.trim()?.trimEnd('/').orEmpty()
         if (normalized.isEmpty()) return
         if (!normalized.startsWith("https://")) {
-            Log.w(tag, "EndpointState: ignoring non-HTTPS backup URL from /about: $normalized")
+            Log.w(tag, "EndpointState: ignoring non-HTTPS fallback URL from /about: $normalized")
             return
         }
-        if (normalized == backupUrl()) return
-        Log.i(tag, "EndpointState: updating persisted backup endpoint to $normalized")
-        prefs.apiBackup.update(normalized)
+        if (normalized == fallbackUrl()) return
+        Log.i(tag, "EndpointState: updating persisted fallback endpoint to $normalized")
+        prefs.apiFallback.update(normalized)
     }
-
 
     fun signalPrimaryRecoveryDetected() {
         _primaryRecoveryAvailable.value = true
@@ -57,6 +64,6 @@ class EndpointState(
 
     companion object {
         const val DEFAULT_PRIMARY_API_URL = "https://api.revanced.app"
-        const val DEFAULT_BACKUP_API_URL = "https://backup-api.revanced.app"
+        const val DEFAULT_FALLBACK_API_URL = "https://backup-api.revanced.app"
     }
 }
