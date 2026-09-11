@@ -16,7 +16,8 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.OutputStream
+import java.io.IOException
+import java.io.InputStream
 
 fun interface Loader<T> {
     fun load(file: File): T
@@ -101,13 +102,16 @@ class Source<T>(
 
     private fun hasInstalled() = file.exists()
 
-    private fun outputStream(): OutputStream = with(file) {
-        // Android 14+ requires dex containers to be readonly.
+    private fun writeFile(stream: InputStream) {
+        val incoming = File(file.parentFile, "${file.name}.part")
+
         try {
-            setWritable(true, true)
-            outputStream()
+            incoming.outputStream().use(stream::copyTo)
+            if (!incoming.renameTo(file)) throw IOException("Could not replace $file")
         } finally {
-            setReadOnly()
+            incoming.delete()
+            // Android 14+ requires dex containers to be readonly.
+            file.setReadOnly()
         }
     }
 
@@ -120,9 +124,7 @@ class Source<T>(
     }
 
     private suspend fun download(info: ReVancedAsset) = withContext(Dispatchers.IO) {
-        handlers.getStream(Uri.parse(info.downloadUrl)) { stream ->
-            outputStream().use { stream.copyTo(it) }
-        }
+        handlers.getStream(Uri.parse(info.downloadUrl), ::writeFile)
 
         UpdateResult(info.version, info.createdAt)
     }
@@ -159,9 +161,7 @@ class Source<T>(
     // Replaces the content with the resource behind [uri], e.g. an imported file.
     suspend fun ActionContext.replace(uri: Uri) {
         withContext(Dispatchers.IO) {
-            handlers.getStream(uri) { stream ->
-                outputStream().use { stream.copyTo(it) }
-            }
+            handlers.getStream(uri, ::writeFile)
         }
     }
 
