@@ -14,6 +14,7 @@ import app.revanced.manager.data.room.AppDatabase.Companion.generateUid
 import app.revanced.manager.data.room.sources.SourceProperties
 import app.revanced.manager.data.room.sources.SourceUrl
 import app.revanced.manager.domain.protocol.ContentProtocolHandler
+import app.revanced.manager.domain.protocol.FileJarProtocolHandler
 import app.revanced.manager.domain.protocol.FileProtocolHandler
 import app.revanced.manager.domain.protocol.HttpProtocolHandler
 import app.revanced.manager.domain.protocol.ProtocolHandler
@@ -23,6 +24,7 @@ import app.revanced.manager.domain.sources.UnsupportedSourceException
 import app.revanced.manager.domain.sources.asSourceException
 import app.revanced.manager.network.dto.ReVancedAsset
 import app.revanced.manager.network.dto.ReVancedAssetHistory
+import app.revanced.manager.util.LocalJar
 import app.revanced.manager.util.simpleMessage
 import app.revanced.manager.util.tag
 import app.revanced.manager.util.toast
@@ -63,6 +65,7 @@ abstract class SourceManager<DB : SourceManager.DatabaseEntity, LOADED, OUTPUT>(
         "https" to get<HttpProtocolHandler>(),
         "content" to get<ContentProtocolHandler>(),
         "file" to get<FileProtocolHandler>(),
+        JAR_SCHEME to get<FileJarProtocolHandler>(),
     )
 
     protected abstract suspend fun dbGetAll(): List<DB>
@@ -237,15 +240,18 @@ abstract class SourceManager<DB : SourceManager.DatabaseEntity, LOADED, OUTPUT>(
     protected fun directoryOf(uid: Int) = sourceDir.resolve(uid.toString()).also { it.mkdirs() }
 
     // The URL of the copy an imported source was stored in.
-    private fun fileUrlOf(uid: Int) = Url(Uri.fromFile(fileOf(uid)).toString())
+    // Keep the host: ktor drops the empty one on schemes it doesn't know so a triple slash
+    // here would eat the first path segment as the host and the file is never found.
+    private fun jarUrlOf(uid: Int) = Url("$JAR_SCHEME://$JAR_AUTHORITY${fileOf(uid).absolutePath}")
 
     // Rows written before sources were URLs hold a sentinel instead of one.
     // They have to be rewritten before anything reads them because
     // parsing a sentinel silently yields a valid but meaningless URL rather than failing.
     private suspend fun migrateLegacyUrls() = dbGetUrls().forEach { (uid, url) ->
         val migrated = when (url) {
-            LEGACY_LOCAL -> fileUrlOf(uid)
+            LEGACY_LOCAL -> jarUrlOf(uid)
             LEGACY_API -> defaultUrl()
+            Uri.fromFile(fileOf(uid)).toString() -> jarUrlOf(uid)
             else -> return@forEach
         }
 
@@ -282,10 +288,11 @@ abstract class SourceManager<DB : SourceManager.DatabaseEntity, LOADED, OUTPUT>(
     suspend fun importFrom(uri: Uri) =
         dispatchAction("Import ($uri)") { state ->
             val uid = generateUid()
-            val entity = createEntity(uid, "", fileUrlOf(uid))
+            val entity = createEntity(uid, "", jarUrlOf(uid))
             with(loadEntity(entity)) {
                 try {
                     replace(uri)
+                    updateDb(uid) { it.copy(versionHash = LocalJar.versionOf(fileOf(uid))) }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.e(tag, "Got exception while importing source", e)
@@ -510,6 +517,8 @@ abstract class SourceManager<DB : SourceManager.DatabaseEntity, LOADED, OUTPUT>(
     }
 }
 
+private const val JAR_SCHEME = "file+jar"
+private const val JAR_AUTHORITY = "localhost"
 private const val LEGACY_LOCAL = "local"
 private const val LEGACY_API = "api"
 private const val VERSION_PATH = "version"

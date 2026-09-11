@@ -2,13 +2,20 @@ package app.revanced.manager.domain.protocol
 
 import android.content.ContentResolver
 import android.net.Uri
+import app.revanced.manager.network.dto.ReVancedAsset
 import app.revanced.manager.network.service.HttpService
 import app.revanced.manager.util.FilePicker
+import app.revanced.manager.util.LocalJar
 import io.ktor.client.request.url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.json.Json
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import kotlin.time.Instant
 
 // Opens streams for the URI scheme it is registered for.
 interface ProtocolHandler {
@@ -43,6 +50,33 @@ class FileProtocolHandler(
     override suspend fun <T> getStream(uri: Uri, block: suspend (InputStream) -> T): T {
         val picked = filePicker.pickFile() ?: throw IOException("No file was selected")
         return contentProtocolHandler.getStream(picked, block)
+    }
+}
+
+class FileJarProtocolHandler(private val json: Json) : ProtocolHandler {
+    override suspend fun <T> getStream(uri: Uri, block: suspend (InputStream) -> T): T {
+        val file = uri.path?.let(::File)?.takeIf(File::canRead)
+            ?: throw IOException("Cannot read $uri")
+
+        if (uri.getQueryParameter(PAYLOAD) != null) {
+            return withContext(Dispatchers.IO) { file.inputStream() }.use { block(it) }
+        }
+
+        return block(descriptorOf(file, uri).byteInputStream())
+    }
+
+    private fun descriptorOf(file: File, uri: Uri) = json.encodeToString(
+        ReVancedAsset(
+            downloadUrl = uri.buildUpon().appendQueryParameter(PAYLOAD, "1").build().toString(),
+            createdAt = Instant.fromEpochMilliseconds(file.lastModified())
+                .toLocalDateTime(TimeZone.UTC),
+            description = "Local file ${file.name}",
+            version = LocalJar.versionOf(file)
+        )
+    )
+
+    private companion object {
+        const val PAYLOAD = "payload"
     }
 }
 

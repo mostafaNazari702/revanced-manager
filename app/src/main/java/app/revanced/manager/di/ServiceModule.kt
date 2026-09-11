@@ -1,6 +1,7 @@
 package app.revanced.manager.di
 
 import app.revanced.manager.domain.protocol.ContentProtocolHandler
+import app.revanced.manager.domain.protocol.FileJarProtocolHandler
 import app.revanced.manager.domain.protocol.FileProtocolHandler
 import app.revanced.manager.domain.protocol.HttpProtocolHandler
 import app.revanced.manager.network.service.HttpService
@@ -18,4 +19,5 @@ val serviceModule = module {
     singleOf(::HttpProtocolHandler)
     singleOf(::ContentProtocolHandler)
     singleOf(::FileProtocolHandler)
+    singleOf(::FileJarProtocolHandler)
 }
